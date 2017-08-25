@@ -26,7 +26,7 @@ class SqliteInit:
             curs.execute('select * from proxy')
             self.sqlite.commit()
         except sqlite3.OperationalError:
-            creTable_sql = """create table proxy 
+            creProxy_sql = """create table proxy
               (id integer primary key autoincrement,
               proxyip VARCHAR (20) NOT NULL,
               create_time DATETIME NOT NULL,
@@ -36,10 +36,21 @@ class SqliteInit:
               location text,
               site_name VARCHAR(20),
               url VARCHAR (50),
-              remarks text)
+              useable INTEGER (10),
+              remarks text,
+              others text)
             """
-            curs.execute(creTable_sql)
-            log.info('数据库初始化，完成proxy表创建')
+            curs.execute(creProxy_sql)
+
+            creIP_sql = """create table ip
+            (id integer primary key autoincrement,
+            ip VARCHAR (20) NOT NULL UNIQUE,
+            response_time FLOAT (8),
+            timout_count INTEGER (4)
+            )
+            """
+            curs.execute(creIP_sql)
+            log.info('数据库初始化，完成表创建')
         except Exception as e:
             log.debug(str(e))
         finally:
@@ -50,6 +61,13 @@ class SqliteInit:
 
 
 def queryData(table, conditions=None, fields='*'):
+    """
+    解码：str(j).decode('string_escape')
+    :param table:
+    :param conditions:
+    :param fields:
+    :return:
+    """
     sqlite = sqlite3.connect(sqlite_path)
     curs = sqlite.cursor()
     # 如果fields不是星号，则把里边的字符串按，或空格切开
@@ -74,13 +92,16 @@ def insertData(table, **kwargs):
     :param kwargs: {column1: value1, column2: value2}
     :return:
     """
-    sqlite = sqlite3.connect(sqlite_path)
+    sqlite = sqlite3.connect(sqlite_path, timeout=1)
+    sqlite.text_factory = str
     curs = sqlite.cursor()
+    fields = kwargs.values()
     insert_sql = 'insert into %s %s values %s' % (table, tuple(kwargs.keys()), tuple(kwargs.values()))
+    # print insert_sql
     try:
         curs.execute(insert_sql)
         sqlite.commit()
-        log.info('插入{0}表数据： {1}'.format(table, kwargs))
+        log.info('插入{0}表数据'.format(table))
     except Exception as e:
         log.error('数据库插入错误： {0}, INSERT：{1}'.format(str(e), insert_sql))
     finally:
@@ -110,11 +131,15 @@ if __name__ == '__main__':
     sql = SqliteInit()
     table = 'proxy'
     # field = 'proxyip,url'
-    conditions = "where proxyip='127.0.0.3'"
+    # conditions = "where proxyip='127.0.0.3'"
     # ret = queryData(table='proxy', fields=field, conditions=conditions)
     # print ret
-    field = ('proxyip', 'url')
-    values = {'url': 'www.baidu.com', 'remarks': 'beizhu','create_time': 1}
+    # field = ('proxyip', 'url')
+    values = {'proxyip':'12.7.0.0.1', 'create_time': '2017-02-02 12:21:21', 'url': 'www.baidu.com', 'remarks': '备注'}
     # insertData(table, **values)
-
-    updataSQL(table, conditions, **values)
+    ret = queryData('proxy')
+    # print str(ret[0][-2]).decode('string_escape')
+    # updataSQL(table, conditions, **values)
+    for i in ret:
+        for j in i:
+            print str(j).decode('string_escape')
