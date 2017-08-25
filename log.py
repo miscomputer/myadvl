@@ -7,18 +7,18 @@ import ctypes
 import re
 import datetime
 
-STD_OUTPUT_HANDLE= -11
+STD_OUTPUT_HANDLE = -11
 FOREGROUND_WHITE = 0x0007
-FOREGROUND_BLUE = 0x01 # text color contains blue.
-FOREGROUND_GREEN= 0x02 # text color contains green.
-FOREGROUND_RED  = 0x04 # text color contains red.
+FOREGROUND_BLUE = 0x01  # text color contains blue.
+FOREGROUND_GREEN = 0x02  # text color contains green.
+FOREGROUND_RED = 0x04  # text color contains red.
 FOREGROUND_INTENSITY = 0x08 # text color is intensified.
 FOREGROUND_YELLOW = FOREGROUND_RED | FOREGROUND_GREEN
 
-BACKGROUND_BLUE = 0x10 # background color contains blue.
-BACKGROUND_GREEN= 0x20 # background color contains green.
-BACKGROUND_RED  = 0x40 # background color contains red.
-BACKGROUND_INTENSITY = 0x80 # background color is intensified.
+BACKGROUND_BLUE = 0x10  # background color contains blue.
+BACKGROUND_GREEN = 0x20  # background color contains green.
+BACKGROUND_RED = 0x40  # background color contains red.
+BACKGROUND_INTENSITY = 0x80  # background color is intensified.
 
 
 def set_color(color, handle=ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)):

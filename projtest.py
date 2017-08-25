@@ -3,8 +3,9 @@ import ConfigParser
 import os
 import re
 
-conf = ConfigParser.ConfigParser()
-conf_path = re.search('\S*myadvl', os.path.dirname(__file__)).group() +'\\conf\\myadvl.ini'
-conf.read(conf_path)
-phantomjs = conf.get('path', 'PhantomJS')
-print phantomjs
+values = {'proxyip': '127.0.0.1', 'url': 'www.baidu.com', 'create_time': '2017-08-21 00:34:31'}
+
+column = []
+for k,v in values.items():
+    column.append('{0} = {1}'.format(k,v))
+print repr(column)[1:-1]

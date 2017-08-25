@@ -62,4 +62,9 @@ if __name__ == '__main__':
     # ips = ip.effectiveIPbyRequests()
     # for ip in ips:
     #     print ip
-    ip.effectiveIPbysele()
+    import threading
+    pool = []
+    for i in range(30):
+        pool.append(threading.Thread(target=ip.effectiveIPbysele))
+    for i in pool:
+        i.start()

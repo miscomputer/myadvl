@@ -1,0 +1,4 @@
+Adaptors
+*.pyc
+.idea/
+*.log
