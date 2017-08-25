@@ -1,4 +1,4 @@
-Adaptors
 *.pyc
 .idea/
 *.log
+*.xml
