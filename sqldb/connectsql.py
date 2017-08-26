@@ -1,13 +1,17 @@
 # -*- coding:utf-8 -*-
 import MySQLdb
 
-class connMydb:
+
+class MydbInit:
 
     def __init__(self):
         self.conn = MySQLdb.connect(host='localhost', user='root', passwd='root', port=3306, db='myadvl')
 
     def closeDB(self):
         self.conn.close()
+
+    def creTable(self):
+        curs = self.conn.cursor()
 
     def insertData(self, table, **kwargs):
         curs = self.conn.cursor()
