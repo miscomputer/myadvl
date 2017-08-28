@@ -95,7 +95,7 @@ def verityByReq(*proxy):
             update_sql = """update tmp_memory_verifyIp 
             set response_time = '{0}',
             verify_time = '{1}',
-            others = 'real_ip:{2}|',
+            others = concat(others,'real_ip:{2}|') ,
             verify_count = verify_count + 1
             where ip='{3}'
             """.format(response_time, nowTime, real_ip, ip)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
     conn = getMySql()
     cur = conn.cursor()
-    select_sql = 'select proxy_type,ip, proxy_level from tmp_memory_verifyip'
+    select_sql = 'select ip, proxy_type, proxy_level from tmp_memory_verifyip'
     cur.execute(select_sql)
     ret = cur.fetchall()
     for i in ret:

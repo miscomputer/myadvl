@@ -1,8 +1,10 @@
 # -*- coding:utf-8 -*-
+import time
 import pymysql
 import ConfigParser
 import re
 import os
+import requests
 from log import Logger
 
 log = Logger()
@@ -105,6 +107,25 @@ def creMemIPtable():
     每日4点、12点、20点：将ip表的ip数据放到内存表,从内存表取IP，不在这个方法里
     :return:
     """
+    getMyIP = 3
+    while getMyIP > 0:
+        try:
+            data_httpbin = requests.get(url='http://httpbin.org/ip', timeout=10)
+            ret1 = re.search('[^"]+[\d.]+', data_httpbin.text).group()
+        except:
+            ret1 = False
+        try:
+            data_myip = requests.get('http://myip.com.tw/')
+            ret2 = re.search('\d+\.\d+\.\d+\.\d+', data_myip.text).group()
+        except:
+            ret2 = False
+        if ret1:
+            ext_ip = ret1
+            break
+        elif ret2:
+            ext_ip = ret2
+            break
+        getMyIP -= 1
     conn = getMySql()
     cur = conn.cursor()
     tableName = 'tmp_memory_verifyIp'
@@ -117,9 +138,9 @@ def creMemIPtable():
         proxy_type VARCHAR (10),
         proxy_level VARCHAR (10),
         timout_count INTEGER (4) DEFAULT 0,
-        others VARCHAR (50)
+        others VARCHAR (50) DEFAULT 'exip:%s|'
         )
-        """
+        """ % ext_ip
     ret = creMemTable(tableName, columns)
     if ret:
         insert_sql = """
@@ -135,5 +156,5 @@ def creMemIPtable():
     conn.close()
 
 if __name__ == '__main__':
-    # creMydb()
+    creMydb()
     creMemIPtable()
