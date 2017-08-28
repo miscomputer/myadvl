@@ -18,7 +18,7 @@ DB_NAME = conf.get('mysql', 'dbName')
 
 
 def creMydb():
-    conn = pymysql.connect(host='localhost', user='root', passwd='root', port=3306, charset='utf8')
+    conn = pymysql.connect(host=DB_HOST, user=DB_USER, passwd=DB_PWD, port=3306, charset='utf8')
     cur = conn.cursor()
     cur.execute('show databases')
     databases = cur.fetchall()
@@ -117,7 +117,7 @@ def creMemIPtable():
         proxy_type VARCHAR (10),
         proxy_level VARCHAR (10),
         timout_count INTEGER (4) DEFAULT 0,
-        others VARCHAR (30)
+        others VARCHAR (50)
         )
         """
     ret = creMemTable(tableName, columns)

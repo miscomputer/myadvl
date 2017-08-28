@@ -43,7 +43,7 @@ class ProxyCheck:
                 proxyip = server.group()
                 # print proxyip
                 # data = requests.get(url='http://httpbin.org/ip',  proxies={"https": "http://{}".format(proxyip)}, timeout=5)
-                data = requests.get(url='http://httpbin.org/ip',  proxies={"http": "http://221.5.45.246:808"}, timeout=10)
+                data = requests.get(url='http://httpbin.org/ip',  proxies={"http": "http://221.5.45.246:808"}, timeout=10,hearder=None)
                 if data.status_code == 200:
                     # effectivePorxy.append(proxyip)
                     print data.text
@@ -75,13 +75,23 @@ def verityByReq(*proxy):
     ip = proxy[0]
     proxy_type = proxy[1]
     proxy_level = proxy[2]
+    baseHeaders = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Charset': 'GBK,utf-8;q=0.7,*;q=0.3',
+        'Accept-Encoding': 'gzip,deflate,sdch',
+        'Accept-Language': 'zh-CN,zh;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Pragma': 'no-cache',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/535.7 (KHTML, like Gecko) Chrome/16.0.912.63 Safari/535.7'
+    }
     try:
-        data = requests.get(url='http://httpbin.org/ip', proxies={'{}'.format(proxy_type): '{0}://{1}'.format(proxy_type,ip)}, timeout=10)
+        data = requests.get(url='http://httpbin.org/ip', proxies={'{}'.format(proxy_type): '{0}://{1}'.format(proxy_type,ip)}, headers=baseHeaders, timeout=10)
         nowTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         # 如果状态返回200，更新ip内存表
         if data.status_code == 200:
             response_time = float(data.elapsed.microseconds) / 10**6
-            real_ip = re.search('[\d.]+', data.text).group()
+            real_ip = re.search('[^"]+[\d.]+', data.text).group()
             update_sql = """update tmp_memory_verifyIp 
             set response_time = '{0}',
             verify_time = '{1}',
@@ -96,29 +106,20 @@ def verityByReq(*proxy):
         else:
             log.warn('代理ip {0} 响应状态为：{1}'.format(ip, data.status_code))
         data.close()
-    except requests.exceptions.ReadTimeout:
-        # 验证超时，ip内存表的timeout_count + 1
-        log.info('代理验证超时:{}'.format(ip))
-        update_sql = """update tmp_memory_verifyIp
-        set timout_count = timout_count + 1,
-        verify_count = verify_count + 1
-        where ip = '{}'
-        """.format(ip)
-        try:
-            cur.execute(update_sql)
-        except Exception as e:
-            log.error('验证超时，写入timeout_count字段失败：{}'.format(e))
-    except requests.exceptions.ConnectTimeout:
-        log.info('代理验证超时:{}'.format(ip))
-        update_sql = """update tmp_memory_verifyIp
-         set timout_count = timout_count + 1,
-         verify_count = verify_count + 1
-         where ip = '{}'
-         """.format(ip)
-        try:
-            cur.execute(update_sql)
-        except Exception as e:
-            log.error('验证超时，写入timeout_count字段失败：{}'.format(e))
+    except Exception as e:
+        if 'Timeout' in e:
+            log.info('代理验证超时:{}'.format(ip))
+            update_sql = """update tmp_memory_verifyIp
+                    set timout_count = timout_count + 1,
+                    verify_count = verify_count + 1
+                    where ip = '{}'
+                    """.format(ip)
+            try:
+                cur.execute(update_sql)
+            except Exception as e:
+                log.error('验证超时，写入timeout_count字段失败：{}'.format(e))
+        else:
+            log.warn('验证代理错误：{}'.format(e))
     finally:
         log.info('代理ip验证完成')
         conn.close()
@@ -126,9 +127,16 @@ def verityByReq(*proxy):
 
 if __name__ == '__main__':
     ip = ProxyCheck()
-    proxy = ('91.199.99.14:3128', 'https', '匿名')
-    verityByReq(*proxy)
-    ip.effectiveIPbysele()
+    # proxy = ('210.38.1.143:80', 'http', '匿名')
+
+    conn = getMySql()
+    cur = conn.cursor()
+    select_sql = 'select proxy_type,ip, proxy_level from tmp_memory_verifyip'
+    cur.execute(select_sql)
+    ret = cur.fetchall()
+    for i in ret:
+        verityByReq(*i)
+        print '--'
 
     # ips = ip.effectiveIPbyRequests()
     # for ip in ips:

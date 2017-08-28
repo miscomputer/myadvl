@@ -11,6 +11,7 @@
 
 
 每日完成计划：
-	0828 自己搭一个http服务验证
+	0828 自己搭一个http服务验证 延后
 	0828 完成多进程代理ip验证函数
-	0828 把proxyCheck的所有timeout异常，放到一个except里处理
+	0828 把proxyCheck的所有timeout异常，放到一个except里处理 OK
+	0828 获取本机真实IP，比较后写入others字段 |后面
