@@ -95,7 +95,7 @@ def verityByReq(*proxy):
             update_sql = """update tmp_memory_verifyIp 
             set response_time = '{0}',
             verify_time = '{1}',
-            others = concat(others,'real_ip:{2}|') ,
+            others = 'real_ip:{2}|',
             verify_count = verify_count + 1
             where ip='{3}'
             """.format(response_time, nowTime, real_ip, ip)

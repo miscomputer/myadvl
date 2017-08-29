@@ -52,11 +52,13 @@ def creMydb():
               remarks text,
               others text)"""
         cur.execute(cre_sql)
-        log.info('数据表proxy创建完成')
+        log.info('proxy数据表创建完成')
     except Exception as e:
-        log.error('数据表proxy创建失败： {}'.format(e))
+        log.error('proxy数据表创建失败： {}'.format(e))
+    creTaskTab()  # 创建任务表
     cur.execute("DROP TABLE IF EXISTS ip")
     try:
+        # 创建ip表 innoDB
         # success_rate: 验证成功率内存数据表(verify_count - timeout_count / verify_count),计算后写到ip表
         creIP_sql = """create table ip
         (id integer primary key auto_increment,
@@ -64,14 +66,39 @@ def creMydb():
         response_time FLOAT (8),
         proxy_type VARCHAR (10),
         proxy_level VARCHAR (10),
-        success_rate FLOAT  (8),
+        success_rate FLOAT  (8) comment '代理验证的成功率，从内存表自动计算获取该值',
         timout_count INTEGER (4)
         )
         """
         cur.execute(creIP_sql)
-        log.info('数据表ip创建完成')
+        log.info('ip数据表创建完成')
     except Exception as e:
-        log.error('数据表ip创建失败： {}'.format(e))
+        log.error('ip数据表ip创建失败： {}'.format(e))
+    finally:
+        conn.close()
+
+
+def creTaskTab():
+    conn = getMySql()
+    cur = conn.cursor()
+    try:
+        # 创建info表
+        creTask_sql = """create table task
+        (id integer primary key auto_increment comment '自增列',
+        task_type VARCHAR (10) not NULL comment '任务类型',
+        task_description VARCHAR (50) comment '任务描述',
+        exp_ip VARCHAR (10) comment '外网IP',
+        start_time DATETIME ,
+        end_time DATETIME comment '如果没有结束时间，意味该任务执行异常中断',
+        others TEXT
+        )
+        """
+        cur.execute(creTask_sql)
+        log.info('创建任务表')
+        return True
+    except Exception as e:
+        log.error('创建任务表失败: {}'.format(e))
+        return False
     finally:
         conn.close()
 
@@ -138,9 +165,9 @@ def creMemIPtable():
         proxy_type VARCHAR (10),
         proxy_level VARCHAR (10),
         timout_count INTEGER (4) DEFAULT 0,
-        others VARCHAR (50) DEFAULT 'exip:%s|'
+        others VARCHAR (50)
         )
-        """ % ext_ip
+        """
     ret = creMemTable(tableName, columns)
     if ret:
         insert_sql = """
