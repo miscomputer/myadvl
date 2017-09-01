@@ -20,6 +20,9 @@ BACKGROUND_GREEN = 0x20  # background color contains green.
 BACKGROUND_RED = 0x40  # background color contains red.
 BACKGROUND_INTENSITY = 0x80  # background color is intensified.
 
+nowDays = datetime.datetime.today().strftime('%Y-%m-%d')
+log_path = re.search('\S*myadvl', os.path.dirname(__file__)).group()
+
 
 def set_color(color, handle=ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)):
     bool = ctypes.windll.kernel32.SetConsoleTextAttribute(handle, color)
@@ -28,8 +31,7 @@ def set_color(color, handle=ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDL
 
 class Logger:
     def __init__(self):
-        self.nowDays = datetime.datetime.today().strftime('%Y-%m-%d')
-        path = re.search('\S*myadvl', os.path.dirname(__file__)).group() +'\\logs\\log_%s.log' % self.nowDays
+        path = log_path + '\\logs\\log_%s.log' % nowDays
         self.logger = logging.getLogger(path)
         self.logger.setLevel(logging.DEBUG)
         fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
@@ -70,6 +72,15 @@ class Logger:
 
     def warn(self, data, color=FOREGROUND_YELLOW):
         self.info(data, logging.WARN, color | FOREGROUND_INTENSITY)
+
+
+def logging_base():
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename='{0}\\logs\\{1}_taskInfo.log'.format(log_path, nowDays),
+                        filemode='a')
+
 
 if __name__ == '__main__':
     log = Logger()
