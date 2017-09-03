@@ -30,8 +30,13 @@ def sendMail():
     mailto_list = getRecipient()
     send_mail(mailto_list, u"每日邮件日志", u"每日邮件日志")
 
+tfunc_threads_count = 0
+
 
 def tFunc():
+    global tfunc_threads_count
+    tfunc_threads_count += 1
+    print tfunc_threads_count
     # if not q.empty():
     #     print 'tfunc:%s' % q.get()
     # print 'inner start time:%s' % datetime.datetime.now().strftime('%H:%M:%S')
@@ -40,6 +45,26 @@ def tFunc():
     # print 'inner executed time:%s' % datetime.datetime.now().strftime('%H:%M:%S')
     time.sleep(10)
     return a/b
+
+
+def job_max_instance_listener(ev):
+    conn = getMySql()
+    cur = conn.cursor()
+    nowTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if ev.code == 2 ** 16:
+        insert_maxinstance_sql = """insert into task
+                                (task_type,task_description,run_status,start_time) VALUES 
+                                ('{0}','已到最大线程数','maxInstance:{0}','{1}')
+        """.format(ev.job_id, nowTime)
+        try:
+            cur.execute(insert_maxinstance_sql)
+            conn.commit()
+            log.warn('执行的任务已到最大线程数，{}未加载到任务'.format(ev.job_id))
+        except Exception as e:
+            log.error('EVENT_JOB_MAX_INSTANCES写入task表失败')
+            log.error(str(e))
+    cur.close()
+    conn.close()
 
 
 def job_listener(ev):
@@ -103,7 +128,12 @@ scheduler.add_job(func=tFunc, trigger='interval', seconds=2, id='proxy_check')
 
 scheduler.add_listener(job_listener, events.EVENT_JOB_ERROR
                        | events.EVENT_JOB_EXECUTED
-                       | events.EVENT_JOB_MISSED)
+                       | events.EVENT_JOB_MISSED
+                       )
+
+scheduler.add_listener(job_max_instance_listener, events.EVENT_JOB_MAX_INSTANCES)
+
+
 scheduler.start()
 
 try:
