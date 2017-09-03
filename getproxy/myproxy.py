@@ -1,16 +1,18 @@
 # _*_ coding:utf-8 _*_
 # author:@shenyi
-import datetime
-import re
 import ConfigParser
-import requests
+import datetime
 import os
-import time
-from selenium import webdriver
-from log import Logger
-import pymysql
-from sqldb.mysqlController import getMySql
+import re
 import sys
+import time
+
+import pymysql
+from selenium import webdriver
+
+from Adaptors.log import Logger
+from sqldb.mysqlController import getMySql
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 

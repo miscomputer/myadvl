@@ -1,46 +1,109 @@
 # _*_ coding:utf-8 _*_
 # author:@shenyi
-from datetime import datetime
 import time
-import os
-from sendmail import send_mail
+import datetime
 import pytz
-
+from sqldb.mysqlController import getMySql
+from Adaptors.getconf import getRecipient
+from apscheduler import events
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.events import EVENT_JOB_EXECUTED,EVENT_JOB_ERROR,EVENT_ALL
-
+from Adaptors.log import Logger
+from Adaptors.log import logging_base
+from sendmail import send_mail
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+from Adaptors.getEXPip import getExpIp
+from Queue import Queue
 
 timez = pytz.timezone('Asia/Shanghai')
+taskLog = logging_base()
+log = Logger()
+executors = {
+    'default': ThreadPoolExecutor(20),
+    'processpool': ProcessPoolExecutor(2)
+}
+scheduler = BackgroundScheduler(timezone=timez, executors=executors)
+q = Queue()
+exp_ip = '1.1.1.1'
 
 
 def sendMail():
-    mailto_list = ['ppag0440f2b3f783@sohu.com', '8697767@qq.com']
-    send_mail(mailto_list, u"我是主题", u"我是正文")
+    mailto_list = getRecipient()
+    send_mail(mailto_list, u"每日邮件日志", u"每日邮件日志")
 
 
-def testFunc():
+def tFunc():
+    # if not q.empty():
+    #     print 'tfunc:%s' % q.get()
+    # print 'inner start time:%s' % datetime.datetime.now().strftime('%H:%M:%S')
     a = 3
     b = 1
-    try:
-        c = a/b
-    except:
-        pass
-    return c
+    # print 'inner executed time:%s' % datetime.datetime.now().strftime('%H:%M:%S')
+    time.sleep(10)
+    return a/b
 
 
-def my_listener(event):
-    import logging
-    log = logging.getLogger('apscheduler.executors.default')
-    if event.exception:
-        print 'beng le:'
+def job_listener(ev):
+    conn = getMySql()
+    cur = conn.cursor()
+    if ev.exception:
+        if ev.code == 2 ** 13:  # EVENT_JOB_ERROR
+            insert_jobErr_sql = """insert into task 
+                                (task_type,task_description,run_status,start_time) VALUES 
+                                ('{1}','任务执行错误','EVENT_JOB_ERROR: {0}','{2}')
+            """.format(ev.exception, ev.job_id, ev.scheduled_run_time.strftime('%Y-%m-%d %H:%M:%S'))
+            try:
+                cur.execute(insert_jobErr_sql)
+                conn.commit()
+                log.error('{} 执行失败，已写入数据表'.format(ev.job_id))
+            except Exception as e:
+                log.error('EVENT_JOB_ERROR写入task表失败')
+                log.error(str(e))
     else:
-        print 'success:'
-        # print event.job_id
-        print event.scheduled_run_time.strftime("%Y-%m-%d %H:%M:%S")
+        if ev.code == 2 ** 14:  # EVENT_JOB_MISSED
+            insert_jobMiss_sql = """insert into task                                
+                                (task_type,task_description,run_status,start_time) VALUES 
+                                ('{0}','任务执行错过','EVENT_JOB_MISSED','{1}')
+            """.format(ev.job_id, ev.scheduled_run_time.strftime('%Y-%m-%d %H:%M:%S'))
+            try:
+                cur.execute(insert_jobMiss_sql)
+                conn.commit()
+                log.warn('{} 错过本次执行，已写入数据表'.format(ev.job_id))
+            except Exception as e:
+                log.error('EVENT_JOB_MISSED写入task表失败')
+                log.error(str(e))
 
-scheduler = BackgroundScheduler(timezone=timez)
-scheduler.add_job(func=testFunc, trigger='interval', seconds=2, id='my_mail')
-scheduler.add_listener(my_listener, EVENT_JOB_ERROR)
+        elif ev.code == 2 ** 12:  # EVENT_JOB_EXECUTED
+            global exp_ip
+            nowTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if ev.job_id == 'proxy_check':
+                insert_jobEXEC_sql = """insert into task
+                                    (task_type,task_description,exp_ip,run_status,start_time,end_time) VALUES 
+                                    ('{0}','代理ip检测','{1}','EVENT_JOB_EXECUTED','{2}','{3}')
+                """.format(ev.job_id, exp_ip, ev.scheduled_run_time.strftime('%Y-%m-%d %H:%M:%S'), nowTime)
+                try:
+                    # print insert_jobEXEC_sql
+                    cur.execute(insert_jobEXEC_sql)
+                    conn.commit()
+                    log.info('任务 {} 已执行'.format(ev.job_id))
+                except Exception as e:
+                    log.error('EVENT_JOB_EXECUTED写入task表失败')
+                    log.error(str(e))
+            elif ev.job_id == 'get_EXPip':
+                exp_ip = ev.retval
+    cur.close()
+    conn.close()
+
+
+scheduler.add_job(func=tFunc, trigger='cron', hour=0, minute=30, id='my_mail')  # 每天0点30分发邮件
+scheduler.add_job(func=getExpIp, trigger='cron', hour=1, id='get_EXPip')  # 每天1点获取一次外网IP
+# scheduler.add_job(func=tFunc,trigger='cron', hour=16, minute=45, id='tfunc')
+scheduler.add_job(func=tFunc, trigger='interval', seconds=2, id='proxy_check')
+# scheduler.add_job(func=getExpIp, args=(q,), trigger='cron', hour=1, id='exp_ip')  # 获取外网IP
+
+
+scheduler.add_listener(job_listener, events.EVENT_JOB_ERROR
+                       | events.EVENT_JOB_EXECUTED
+                       | events.EVENT_JOB_MISSED)
 scheduler.start()
 
 try:
@@ -48,3 +111,24 @@ try:
         time.sleep(1)
 except (KeyboardInterrupt, SystemExit):
     scheduler.shutdown()
+
+# EVENTS EXCEPTION CODE TABLE
+"""
+EVENT_SCHEDULER_STARTED = EVENT_SCHEDULER_START = 2 ** 0 = 1    调度程序启动了
+EVENT_SCHEDULER_SHUTDOWN = 2 ** 1 = 2   调度程序已关闭
+EVENT_SCHEDULER_PAUSED = 2 ** 2 = 4    调度程序中的作业处理已暂停
+EVENT_SCHEDULER_RESUMED = 2 ** 3 = 8    调度程序中的作业处理已恢复
+EVENT_EXECUTOR_ADDED = 2 ** 4 = 16  执行程序已添加到调度程序
+EVENT_EXECUTOR_REMOVED = 2 ** 5 = 32    作业存储从调度程序中删除
+EVENT_JOBSTORE_ADDED = 2 ** 6 = 64    	作业存储已添加到调度程序 
+EVENT_JOBSTORE_REMOVED = 2 ** 7 = 128   作业存储从调度程序中删除
+EVENT_ALL_JOBS_REMOVED = 2 ** 8 = 256   所有作业都从所有作业仓库或一个特定作业存储库中删除
+EVENT_JOB_ADDED = 2 ** 9 = 512    作业已添加到作业存储
+EVENT_JOB_REMOVED = 2 ** 10 = 1024    作业已从作业存储库中删除
+EVENT_JOB_MODIFIED = 2 ** 11 = 2048    作业从调度程序外部修改
+EVENT_JOB_EXECUTED = 2 ** 12 = 4096    作业成功执行
+EVENT_JOB_ERROR = 2 ** 13 = 8192    作业在执行期间引发异常 
+EVENT_JOB_MISSED = 2 ** 14 = 16384    作业的执行错过了
+EVENT_JOB_SUBMITTED = 2 ** 15 = 32768    作业被提交给其执行者运行 | 
+EVENT_JOB_MAX_INSTANCES = 2 ** 16 = 65536    被提交给其执行者的作业不被执行者接受，因为该作业已经达到最大并发
+"""

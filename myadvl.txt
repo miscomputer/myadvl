@@ -15,3 +15,4 @@
 	0828 完成多进程代理ip验证函数 延后
 	0828 把proxyCheck的所有timeout异常，放到一个except里处理 OK
 	0828 获取本机真实IP，比较后写入others字段 |后面 修改数据库，增加task表
+	0903 advltask.py job_listener：EVENT_JOB_ERROR 写完了，EVENT_JOB_EXECUTED，EVENT_JOB_MISSED白天完成

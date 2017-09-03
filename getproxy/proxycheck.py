@@ -1,16 +1,17 @@
 # _*_ coding:utf-8 _*_
 # author:@shenyi
-import requests
+import ConfigParser
 import datetime
+import os
 import re
 import time
-import ConfigParser
-import os
-from log import Logger
-from sqldb.mysqlController import getMySql
+
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.proxy import ProxyType
 
+from Adaptors.log import Logger
+from sqldb.mysqlController import getMySql
 
 conf = ConfigParser.ConfigParser()
 conf_path = re.search('\S*myadvl', os.path.dirname(__file__)).group() +'\\conf\\myadvl.ini'

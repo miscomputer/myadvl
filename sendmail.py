@@ -7,14 +7,15 @@ import smtplib
 import traceback
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from Adaptors import getconf
 
-mailto_list = ['ppag0440f2b3f783@sohu.com', '8697767@qq.com']
+mailto_list = getconf.getRecipient()
 mail_host = "smtp.sohu.com"  # 设置服务器
 mail_user = "ppag0440f2b3f783"  # 用户名
 mail_pass = "computer"  # 口令
 mail_postfix = "sohu.com"  # 发件箱的后缀
-log_path = re.search('\S*myadvl', os.path.dirname(__file__)).group() +'\\logs\\log_%s.log' % datetime.datetime.today().strftime('%Y-%m-%d')
-# print os.path.split(log_path)[1]
+beforday_log = re.search('\S*myadvl', os.path.dirname(__file__)).group() +'\\logs\\log_%s.log' % (datetime.datetime.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+# print beforday_log
 
 
 def send_mail(to_list, sub, content):
@@ -31,11 +32,13 @@ def send_mail(to_list, sub, content):
     msg['Subject'] = sub
     msg['From'] = me
     msg['To'] = ";".join(to_list)
-    with open(log_path, 'r')as h:
+
+    # 发送前一天的日志
+    with open(beforday_log, 'r')as h:
         content_attach = h.read()
     log_attach = MIMEText(content_attach, 'plain', 'utf-8')
     log_attach['Content-Type'] = 'application/octet-stream'
-    log_attach['Content-Disposition'] = 'attachment;filename="{}"'.format(os.path.split(log_path)[1])
+    log_attach['Content-Disposition'] = 'attachment;filename="{}"'.format(os.path.split(beforday_log)[1])
     msg.attach(log_attach)
     try:
         server = smtplib.SMTP()
@@ -46,7 +49,7 @@ def send_mail(to_list, sub, content):
         return True
     except Exception, e:
         print str(e)
-        print traceback.print_exc()
+        # print traceback.print_exc()
         return False
 
 

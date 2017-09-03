@@ -1,11 +1,12 @@
 # -*- coding:utf-8 -*-
-import time
-import pymysql
 import ConfigParser
-import re
 import os
+import re
+
+import pymysql
 import requests
-from log import Logger
+
+from Adaptors.log import Logger
 
 log = Logger()
 
@@ -85,9 +86,10 @@ def creTaskTab():
         # 创建info表
         creTask_sql = """create table task
         (id integer primary key auto_increment comment '自增列',
-        task_type VARCHAR (10) not NULL comment '任务类型',
+        task_type VARCHAR (20) not NULL comment '任务类型',
         task_description VARCHAR (50) comment '任务描述',
-        exp_ip VARCHAR (10) comment '外网IP',
+        exp_ip VARCHAR (20) comment '外网IP',
+        run_status TEXT comment '执行状态',
         start_time DATETIME ,
         end_time DATETIME comment '如果没有结束时间，意味该任务执行异常中断',
         others TEXT

@@ -33,7 +33,7 @@ class Logger:
     def __init__(self):
         path = log_path + '\\logs\\log_%s.log' % nowDays
         self.logger = logging.getLogger(path)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
         sh = logging.StreamHandler()
         sh.setFormatter(fmt)
