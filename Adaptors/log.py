@@ -35,13 +35,14 @@ class Logger:
         self.logger = logging.getLogger(path)
         self.logger.setLevel(logging.INFO)
         fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
-        sh = logging.StreamHandler()
-        sh.setFormatter(fmt)
-        self.logger.addHandler(sh)
-        fh = logging.FileHandler(path)
-        fh.setFormatter(fmt)
-        self.logger.addHandler(fh)
-        self.case_result = True
+        if not self.logger.handlers:
+            sh = logging.StreamHandler()
+            sh.setFormatter(fmt)
+            self.logger.addHandler(sh)
+            fh = logging.FileHandler(path)
+            fh.setFormatter(fmt)
+            self.logger.addHandler(fh)
+            self.case_result = True
 
     def __getLogInfo(self):
         try:
@@ -84,5 +85,4 @@ def logging_base():
 
 if __name__ == '__main__':
     log = Logger()
-    log.info(data='test')
-    log.error(data='test')
+    log.info('test')

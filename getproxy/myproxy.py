@@ -6,13 +6,10 @@ import os
 import re
 import sys
 import time
-
 import pymysql
 from selenium import webdriver
-
 from Adaptors.log import Logger
 from sqldb.mysqlController import getMySql
-
 reload(sys)
 sys.setdefaultencoding('utf-8')
 

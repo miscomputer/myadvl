@@ -12,16 +12,29 @@ from Adaptors.log import logging_base
 from sendmail import send_mail
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from Adaptors.getEXPip import getExpIp
+from getproxy.myproxy import GetProxyIP
 from Queue import Queue
 
-timez = pytz.timezone('Asia/Shanghai')
+
+# timez = pytz.timezone('Asia/Shanghai')
 taskLog = logging_base()
 log = Logger()
 executors = {
     'default': ThreadPoolExecutor(20),
-    'processpool': ProcessPoolExecutor(2)
+    'processpool': ProcessPoolExecutor(3)
 }
-scheduler = BackgroundScheduler(timezone=timez, executors=executors)
+
+job_defaults = {
+    'apscheduler.executors.processpool': {
+        'type': 'processpool',
+        'max_workers': '15'
+    },
+    'apscheduler.job_defaults.coalesce': 'false',
+    'apscheduler.job_defaults.max_instances': '5',
+    'apscheduler.timezone': 'Asia/Shanghai',
+}
+
+scheduler = BackgroundScheduler(executors=executors,job_defaults=job_defaults)
 q = Queue()
 exp_ip = '1.1.1.1'
 
@@ -31,12 +44,10 @@ def sendMail():
     send_mail(mailto_list, u"每日邮件日志", u"每日邮件日志")
 
 tfunc_threads_count = 0
+all_threads_count = 0
 
 
 def tFunc():
-    global tfunc_threads_count
-    tfunc_threads_count += 1
-    print tfunc_threads_count
     # if not q.empty():
     #     print 'tfunc:%s' % q.get()
     # print 'inner start time:%s' % datetime.datetime.now().strftime('%H:%M:%S')
@@ -118,11 +129,14 @@ def job_listener(ev):
     cur.close()
     conn.close()
 
-
+getproxy = GetProxyIP()
 scheduler.add_job(func=tFunc, trigger='cron', hour=0, minute=30, id='my_mail')  # 每天0点30分发邮件
 scheduler.add_job(func=getExpIp, trigger='cron', hour=1, id='get_EXPip')  # 每天1点获取一次外网IP
+scheduler.add_job(func=getproxy.getProxy_goubanjia, trigger='cron', hour='3,9,15,21', id='get_goubanjia')  # 每天1点获取一次外网IP
+
+
 # scheduler.add_job(func=tFunc,trigger='cron', hour=16, minute=45, id='tfunc')
-scheduler.add_job(func=tFunc, trigger='interval', seconds=2, id='proxy_check')
+# scheduler.add_job(func=tFunc, trigger='interval', seconds=2, id='proxy_check')
 # scheduler.add_job(func=getExpIp, args=(q,), trigger='cron', hour=1, id='exp_ip')  # 获取外网IP
 
 
@@ -131,7 +145,8 @@ scheduler.add_listener(job_listener, events.EVENT_JOB_ERROR
                        | events.EVENT_JOB_MISSED
                        )
 
-scheduler.add_listener(job_max_instance_listener, events.EVENT_JOB_MAX_INSTANCES)
+scheduler.add_listener(job_max_instance_listener, events.EVENT_JOB_MAX_INSTANCES
+                       | events.EVENT_JOBSTORE_ADDED)
 
 
 scheduler.start()
